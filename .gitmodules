@@ -10,3 +10,6 @@
 [submodule "src/mpclab_simulation"]
 	path = src/mpclab_simulation
 	url = git@github.com:MPC-Berkeley/mpclab_simulation.git
+[submodule "utils/logging"]
+	path = utils/logging
+	url = git@github.com:CadenzaCoda/logging.git
