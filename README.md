@@ -1,1 +1,1 @@
-# ConstraintAwareIL
+Implementation of experiments in "*A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing*" (IROS 2025). 

@@ -1,0 +1,16 @@
+model_hparams:
+    ac_dim: 2
+    st_dim: 6
+
+    n_layers: 3
+    size: 128
+
+    dyn_layers: 3
+    dyn_size: 64
+
+    critic_layers: 4
+    critic_size: 256
+
+    lr: !!float 1e-3
+    weight_decay: !!float 1e-4
+    lam: !!float 1.
