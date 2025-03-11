@@ -1,0 +1,87 @@
+carla:
+  carla_params:
+    dt: 0.1
+    n_laps: 50
+
+    simulation: false
+
+    v_long_max: 4.0  # 3.5
+    v_long_min: -10
+    v_tran_max: 10
+    v_tran_min: -10
+    w_psi_max : 10
+    w_psi_min : -10
+    u_a_max: 1
+    u_a_min: -1
+    u_steer_max: 0.436
+    u_steer_min: -0.436
+    u_a_rate_max: 40
+    u_a_rate_min: -40
+    u_steer_rate_max: 4.5
+    u_steer_rate_min: -4.5
+
+    mpc_params:
+      N: 12
+      
+      pos_idx: [3, 4]
+      # state_scaling: [4.0, 2.0, 7.0, 6.0, 6.0, 6.283185307179586]
+      # input_scaling: [2.0, 0.436]
+
+      state_scaling: [12.0, 3.0, 7.0, 100.0, 100.0, 6.283185307179586]  # [4.0, 3.0, 7.0, 6.283185307179586, 20.0, 1.0]
+      input_scaling: [3.0, 0.3]  # [2.0, 0.436]
+
+      contouring_cost: 0.1  # 0.1
+      contouring_cost_N: 0.1  # 0.1
+      lag_cost: 1000.0
+      lag_cost_N: 1000.0
+      performance_cost: 0.035  # 0.035  # 0.05
+      vs_cost: 0.001
+      vs_rate_cost: 0.001
+      vs_max: 20.0
+      vs_min: 0.0
+      vs_rate_max: 10.0
+      vs_rate_min: -10.0
+
+      soft_track: true
+      track_slack_quad: 250
+      track_slack_lin: 0
+      track_tightening: 0.1  # 0.1
+
+      qp_iters: 2
+      damping: 0.25
+      qp_interface: 'hpipm'
+
+      # delay: [2, 2]
+      
+      verbose: false
+
+    dynamics_config:
+      model_name: 'dynamic_bicycle_cl'
+
+      discretization_method: 'rk4'
+
+      wheel_dist_front: 1.04  # 0.13
+      wheel_dist_rear: 1.04  # 0.13
+      wheel_dist_center_front: 0.8  # 0.1
+      wheel_dist_center_rear: 0.8  # 0.1
+      bump_dist_front: 1.2  # 0.15
+      bump_dist_rear: 1.2  # 0.15
+      bump_dist_center: 0.8  # 0.1
+
+      mass: 1696.0  # 2.2187
+      gravity: 9.81
+      yaw_inertia: 1332.1536  # 0.02723
+
+      # Tire model parameters:
+      tire_model: 'pacejka'
+      wheel_friction: 0.9
+      pacejka_b_front: 5.0
+      pacejka_c_front: 2.28
+      pacejka_b_rear: 5.0
+      pacejka_c_rear: 2.28
+
+      simple_slip: false
+
+      use_mx: true
+
+      M: 10

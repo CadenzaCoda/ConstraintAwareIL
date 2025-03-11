@@ -1,0 +1,9 @@
+[submodule "mpclab_controllers"]
+	path = mpclab_controllers
+	url = git@github.com:MPC-Berkeley/mpclab_controllers.git
+[submodule "mpclab_common"]
+	path = mpclab_common
+	url = git@github.com:MPC-Berkeley/mpclab_common.git
+[submodule "mpclab_simlation"]
+	path = mpclab_simlation
+	url = git@github.com:MPC-Berkeley/mpclab_simulation.git

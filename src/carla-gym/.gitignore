@@ -1,0 +1,10 @@
+*/__pycache__/*
+**/*.pkl
+**/*.pyc
+**/*.0
+model_data
+**/.DS_Store
+**/*.xodr
+**/*.o
+**/*.so
+**/*.c

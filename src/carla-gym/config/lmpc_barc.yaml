@@ -1,0 +1,261 @@
+lmpc:
+    # ros__parameters:
+    #     dt: 0.1
+    #     n_laps: 50
+    #     n_init_laps: 2
+
+    #     simulation: false
+
+    #     v_long_max: 4.0
+    #     v_long_min: -10
+    #     v_tran_max: 10
+    #     v_tran_min: -10
+    #     w_psi_max : 10
+    #     w_psi_min : -10
+    #     u_a_max: 2.0
+    #     u_a_min: -2.0
+    #     u_steer_max: 0.436
+    #     u_steer_min: -0.436
+    #     u_a_rate_max: 40
+    #     u_a_rate_min: -40
+    #     u_steer_rate_max: 4.5
+    #     u_steer_rate_min: -4.5
+
+    #     pid_steer_params:
+    #       Kp: 0.3  # 1.0
+    #       Ki: 0.001  # 0.15
+    #       Kd: 0.0  # 0.0
+    #     pid_speed_params:
+    #       Kp: 0.5
+    #       Ki: 0.1  # 0.5
+    #       Kd: 0.0  # 0.02
+    #       x_ref: 1.0
+
+    #     mpc_params:
+    #       N: 20
+
+    #       delay: [2, 2]
+
+    #       qp_iters: 1
+    #       damping: 0.0
+    #       keep_init_safe_set: true
+
+    #       state_scaling: [4.0, 3.0, 7.0, 6.283185307179586, 20.0, 1.0]
+    #       input_scaling: [2.0, 0.436]
+
+    #       terminal_cost_scaling: 1.0
+
+    #       n_ss_pts: 48
+    #       n_ss_its: 4
+
+    #       # convex_hull_slack_quad: [500, 500, 500, 500, 500, 500]
+    #       # convex_hull_slack_quad: [1000, 10, 100, 10, 1000, 100]
+    #       convex_hull_slack_quad: [500, 5, 50, 5, 500, 50]
+    #       # convex_hull_slack_quad: [400, 4, 40, 4, 400, 40]
+    #       # convex_hull_slack_quad: [300, 3, 30, 3, 300, 30]
+    #       # convex_hull_slack_quad: [200, 2, 20, 2, 200, 20]
+    #       # convex_hull_slack_quad: [100, 1, 10, 1, 100, 10]
+    #       convex_hull_slack_lin: [0, 0, 0, 0, 0, 0]
+
+    #       soft_state_bound_idxs: [5]
+    #       soft_state_bound_quad: [50]
+    #       soft_state_bound_lin: [250]
+    #       # soft_state_bound_quad: [5]
+    #       # soft_state_bound_lin: [25]
+
+    #       regression_regularization: 0.0
+    #       # regression_regularization: 0.001
+    #       regression_state_out_idxs:
+    #         i0: [0]
+    #         i1: [1]
+    #         i2: [2]
+    #       regression_state_in_idxs:
+    #         i0: [0, 1, 2]
+    #         i1: [0, 1, 2]
+    #         i2: [0, 1, 2]
+    #       regression_input_in_idxs:
+    #         i0: [0]
+    #         i1: [1]
+    #         i2: [1]
+
+    #       nearest_neighbor_weights:
+    #         i0: [0.1, 1.0, 1.0, 1.0, 1.0]
+    #         i1: [0.1, 1.0, 1.0, 1.0, 1.0]
+    #         i2: [0.1, 1.0, 1.0, 1.0, 1.0]
+    #       nearest_neighbor_bw: 10.0
+    #       nearest_neighbor_max_points: 25
+
+    #       #safe_set_init_data_file: '~/barc_data/barc_run_ltv_mpc_01-23-2024_14-46-00/barc_run_ltv_mpc_01-23-2024_14-46-00_0.db3'
+    #       safe_set_init_data_file: ''
+    #       safe_set_topic: '/experiment/barc_3/state_input_log'
+
+    #       verbose: false
+
+    #     dynamics_config:
+    #       model_name: 'dynamic_bicycle_cl'
+
+    #       discretization_method: 'rk4'
+
+    #       wheel_dist_front: 0.13
+    #       wheel_dist_rear: 0.13
+    #       wheel_dist_center_front: 0.1
+    #       wheel_dist_center_rear: 0.1
+    #       bump_dist_front: 0.15
+    #       bump_dist_rear: 0.15
+    #       bump_dist_center: 0.1
+
+    #       mass: 2.92
+    #       gravity: 9.81
+    #       yaw_inertia: 0.03323
+
+    #       # Tire model parameters:
+    #       tire_model: 'pacejka'
+    #       wheel_friction: 0.9
+    #       pacejka_b_front: 5.0
+    #       pacejka_c_front: 2.28
+    #       pacejka_b_rear: 5.0
+    #       pacejka_c_rear: 2.28
+
+    #       simple_slip: false
+
+    #       M: 10
+    ros__parameters:
+        dt: 0.1
+        n_laps: 50
+        n_init_laps: 4
+
+        simulation: false
+
+        v_long_max: 10.0
+        v_long_min: -10.0
+        # v_long_max: 2.8
+        # v_long_min: -2.8
+
+        v_tran_max: 10
+        v_tran_min: -10
+        w_psi_max: 10
+        w_psi_min: -10
+        u_a_max: 2.0
+        u_a_min: -2.0
+        u_steer_max: 0.436
+        u_steer_min: -0.436
+        u_a_rate_max: 40
+        u_a_rate_min: -40
+        u_steer_rate_max: 4.5
+        u_steer_rate_min: -4.5
+
+        # pid_steer_params:
+        #   Kp: 0.3  # 1.0
+        #   Ki: 0.001  # 0.15
+        #   Kd: 0.0  # 0.0
+        #   x_ref: 0.3
+        # pid_speed_params:
+        #   Kp: 0.5
+        #   Ki: 0.1  # 0.5
+        #   Kd: 0.0  # 0.02
+        #   x_ref: 1.0
+        pid_steer_params:
+            Kp: 0.45  # 1.0
+            Ki: 0.0  # 0.15
+            Kd: 0.1  # 0.0
+            u_min: -0.436
+            u_max: 0.436
+            du_min: -4.5
+            du_max: 4.5
+            u_ref: 0.0
+            #x_ref: 0.25
+        pid_speed_params:
+            Kp: 0.85
+            Ki: 0.0  # 0.5
+            Kd: 0.08  # 0.02
+            x_ref: 1.0
+
+        mpc_params:
+            N: 20
+
+            delay: [ 2, 2 ]
+
+            qp_iters: 1
+            damping: 0.0
+            keep_init_safe_set: false # true
+
+            state_scaling: [ 4.0, 3.0, 7.0, 6.283185307179586, 20.0, 1.0 ]
+            input_scaling: [ 2.0, 0.436 ]
+
+            terminal_cost_scaling: 1.0
+
+            n_ss_pts: 48
+            n_ss_its: 4
+
+            convex_hull_slack_quad: [ 500, 500, 500, 500, 500, 500 ]
+            # convex_hull_slack_quad: [1000, 10, 100, 10, 1000, 100]
+            # convex_hull_slack_quad: [500, 5, 50, 5, 500, 50]
+            # convex_hull_slack_quad: [400, 4, 40, 4, 400, 40]
+            # convex_hull_slack_quad: [300, 3, 30, 3, 300, 30]
+            # convex_hull_slack_quad: [200, 2, 20, 2, 200, 20]
+            # convex_hull_slack_quad: [100, 1, 10, 1, 100, 10]
+            convex_hull_slack_lin: [ 0, 0, 0, 0, 0, 0 ]
+
+            soft_state_bound_idxs: [ 5 ]
+            soft_state_bound_quad: [ 50 ]
+            soft_state_bound_lin: [ 250 ]
+            # soft_state_bound_quad: [5]
+            # soft_state_bound_lin: [25]
+
+            # regression_regularization: 0.0
+            regression_regularization: 0.000
+            regression_state_out_idxs:
+                i0: [ 0 ]
+                i1: [ 1 ]
+                i2: [ 2 ]
+            regression_state_in_idxs:
+                i0: [ 0, 1, 2 ]
+                i1: [ 0, 1, 2 ]
+                i2: [ 0, 1, 2 ]
+            regression_input_in_idxs:
+                i0: [ 0 ]
+                i1: [ 1 ]
+                i2: [ 1 ]
+
+            nearest_neighbor_weights:
+                i0: [ 0.1, 1.0, 1.0, 1.0, 1.0 ]
+                i1: [ 0.1, 1.0, 1.0, 1.0, 1.0 ]
+                i2: [ 0.1, 1.0, 1.0, 1.0, 1.0 ]
+            nearest_neighbor_bw: 10.0
+            nearest_neighbor_max_points: 25
+
+            #      safe_set_init_data_file: '~/Documents/vision_racing_barc/barc_run_ltv_mpc_01-29-2024_16-26-18/barc_run_ltv_mpc_01-29-2024_16-26-18_0.db3'
+            #safe_set_init_data_file: '~/Documents/vision_racing_barc/barc_run_ltv_mpc_01-29-2024_16-26-18/barc_run_ltv_mpc_01-29-2024_16-26-18_0.db3'
+            #      safe_set_topic: '/experiment/barc_3/state_input_log'
+
+            verbose: false
+
+        dynamics_config:
+            model_name: 'dynamic_bicycle_cl'
+
+            discretization_method: 'rk4'
+
+            wheel_dist_front: 0.13
+            wheel_dist_rear: 0.13
+            wheel_dist_center_front: 0.1
+            wheel_dist_center_rear: 0.1
+            bump_dist_front: 0.15
+            bump_dist_rear: 0.15
+            bump_dist_center: 0.1
+
+            mass: 2.920   #2.54
+            gravity: 9.81
+            # yaw_inertia: 0.13323
+            yaw_inertia: 0.13323
+
+            # Tire model parameters:
+            tire_model: 'pacejka'
+            wheel_friction: 0.9
+            pacejka_b_front: 5.0
+            pacejka_c_front: 2.28
+            pacejka_b_rear: 5.0
+            pacejka_c_rear: 2.28
+
+            simple_slip: false
+
+            M: 10
