@@ -1,0 +1,53 @@
+<?xml version="1.0" standalone="yes"?>
+<OpenDRIVE>
+  <header revMajor="1" revMinor="4" name="SegmentTrack" version="1.00" date="2025-01-20" north="0" south="0" east="0" west="0"/>
+  <road name="SegmentTrack" length="17.461412207630154" id="1" junction="-1">
+    <planView>
+      
+            <geometry s="0" x="0" y="0" hdg="0" length="2.251">
+              <line/>
+            </geometry>
+            <geometry s="2.251" x="2.251" y="0.0" hdg="0" length="3.620685533262237">
+              <arc curvature="0.8676789587852494"/>
+            </geometry>
+            <geometry s="5.871685533262237" x="2.251" y="2.305" hdg="3.141592653589793" length="0.9009999999999999">
+              <line/>
+            </geometry>
+            <geometry s="6.772685533262237" x="1.35" y="2.305" hdg="3.141592653589793" length="1.6024753617155325">
+              <arc curvature="-0.980231187525578"/>
+            </geometry>
+            <geometry s="8.37516089497777" x="0.3298325000000004" y="3.3251675" hdg="1.5707963267948966" length="0.15000000000000002">
+              <line/>
+            </geometry>
+            <geometry s="8.52516089497777" x="0.3298325000000004" y="3.4751675" hdg="1.5707963267948966" length="3.858449119267546">
+              <arc curvature="0.8142112430359495"/>
+            </geometry>
+            <geometry s="12.383610014245315" x="-2.1265324999999997" y="3.4751675000000004" hdg="4.71238898038469" length="2.25454">
+              <line/>
+            </geometry>
+            <geometry s="14.638150014245316" x="-2.1265325" y="1.2206275000000004" hdg="4.71238898038469" length="1.9173571933848375">
+              <arc curvature="0.8192507542227256"/>
+            </geometry>
+            <geometry s="16.555507207630153" x="-0.9059050000000005" y="2.220446049250313e-16" hdg="6.283185307179586" length="0.9059049999999997">
+              <line/>
+            </geometry>
+    </planView>
+    <lanes>
+      <laneSection s="0.0">
+        <center>
+          <lane id="0" type="none" level="false"/>
+        </center>
+        <right>
+          <lane id="-1" type="driving" level="false">
+            <width sOffset="0.0" a="0.70" b="0.0" c="0.0" d="0.0"/>
+          </lane>
+        </right>
+        <left>
+          <lane id="1" type="driving" level="false">
+            <width sOffset="0.0" a="0.70" b="0.0" c="0.0" d="0.0"/>
+          </lane>
+        </left>
+      </laneSection>
+    </lanes>
+  </road>
+</OpenDRIVE>
