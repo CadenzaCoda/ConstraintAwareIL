@@ -32,6 +32,10 @@ potentially run into some compatibility issues that we didn't encounter.
 However, if you built CARLA from source, you may also follow the official documentation to build the Python API for your
 Python version. 
 
+## HPIPM
+The expert policy uses [HPIPM](https://github.com/giaf/hpipm) as the optimization solver. 
+Follow the instructions to setup the environment and install the Python API to your Python environment.  
+
 # Running the experiments
 Before running the experiments: 
 - Set the model hyperparameters in `config/safeAC.yaml` (for full-state feedback experiments) or `config/visionSafeAC.yaml` (for image feedback experiments). See the example files for template.
