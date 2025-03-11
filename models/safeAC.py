@@ -123,7 +123,8 @@ class SafeAC(BaseModel):
     def forward(self, x):
         return self.actor(x)
 
-    def fit(self, train_dataset: EfficientReplayBufferPN, n_epochs, val_dataset=None):
+    def fit(self, train_dataset: EfficientReplayBufferPN, n_epochs, val_dataset=None,
+            global_step=None):
         info = defaultdict(lambda: {})
         dynamics_info = self.dynamics.fit(train_dataset=train_dataset, n_epochs=n_epochs)
         if train_dataset.D_neg.initialized and len(train_dataset.D_neg) > 0:

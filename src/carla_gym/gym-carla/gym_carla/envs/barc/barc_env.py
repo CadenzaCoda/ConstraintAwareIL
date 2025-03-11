@@ -94,7 +94,7 @@ class BarcEnv(gym.Env):
             from gym_carla.envs.barc.cameras.carla_bridge import CarlaConnector
             # All images are channel-first.
             observation_space.update(dict(
-                camera=spaces.Box(low=0, high=255, shape=(3, self.camera_bridge.height, self.camera_bridge.width),
+                camera=spaces.Box(low=0, high=255, shape=(self.camera_bridge.height, self.camera_bridge.width, 3),
                                   dtype=np.uint8),
                 # depth=spaces.Box(low=0, high=255, shape=(3, H, W), dtype=np.uint8),
                 # imu=spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float64),

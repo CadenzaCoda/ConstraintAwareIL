@@ -76,7 +76,7 @@ class CarlaConnector:
     def load_opendrive_map(self):
         xodr_path = Path(__file__).resolve().parents[1] / 'OpenDrive' / f"{self.track_name}.xodr"
         if not os.path.exists(xodr_path):
-            raise ValueError("The file does not exist.")
+            raise ValueError(f"The file {xodr_path} does not exist.")
             return
     
         with open(xodr_path, encoding='utf-8') as od_file:

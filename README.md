@@ -5,7 +5,7 @@ Implementation of experiments in "*A Simple Approach to Constraint-Aware Imitati
 ```shell
 conda create -n CAIL python=3.8
 conda activate CAIL
-pip install -e src/carla-gym/gym_carla
+pip install -e src/carla_gym/gym-carla
 pip install -e src/mpclab_common
 pip install -e src/mpclab_controllers
 pip install -e src/mpclab_simulation
@@ -41,7 +41,7 @@ For each experiment in the paper, run the following.
 
 ## Experiment V-A: Image Feedback Autonomous Path Following
 ```shell
-python il_trainer.py -c pid -o img -m <comment_for_logs> --n_epochs 50 
+python il_trainer.py -c pid -o camera -m <comment_for_logs> --n_epochs 50 
 ```
 
 ## Experiment V-B: Full-state Feedback Autonomous Car Racing
@@ -51,5 +51,12 @@ python il_trainer.py -c mpcc-conv -o state -m <comment_for_logs> --n_epochs 500
 
 ## Experiment V-C: Image Feedback Autonomous Car Racing 
 ```shell
-python il_trainer.py -c mpcc-conv -o img -m <comment_for_logs> --n_epochs 200
+python il_trainer.py -c mpcc-conv -o camera -m <comment_for_logs> --n_epochs 200
 ```
+
+## Side note
+Run 
+```shell
+python il_trainer.py -h
+```
+for usage of all command line arguments. 

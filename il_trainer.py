@@ -15,9 +15,9 @@ import yaml
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from carla_gym.controllers.barc_lmpc import LMPCWrapper
-from carla_gym.controllers.barc_mpcc_conv import MPCCConvWrapper
-from carla_gym.controllers.barc_pid import PIDWrapper
+from src.carla_gym.controllers.barc_lmpc import LMPCWrapper
+from src.carla_gym.controllers.barc_mpcc_conv import MPCCConvWrapper
+from src.carla_gym.controllers.barc_pid import PIDWrapper
 import models.feedforward
 from models import safeAC, visionSafeAC
 from models.base_model import BaseModel
@@ -87,7 +87,7 @@ class IL_Trainer_CARLA(ABC):
         self.no_saving = no_saving
         self.n_initial_training_epochs = n_initial_training_epochs
         self.beta = beta
-        self.use_labml_tracker = use_labml_tracker
+        # self.use_labml_tracker = use_labml_tracker
         self.agent_params = agent_params
 
         self.n_eval_success, self.n_eval_total = 0, 0
@@ -323,12 +323,7 @@ class IL_Trainer_CARLA(ABC):
             # self.writer.ntfy(message="Training program terminated.")
 
     def main(self, n_epochs: int):
-        if self.use_labml_tracker:
-            with experiment.record(name=f"{trainer.agent.model_name}_{params['comment']}",
-                                   exp_conf={**params, **agent_params}):
-                self.training_loop(n_epochs=n_epochs)
-        else:
-            self.training_loop(n_epochs=n_epochs)
+        self.training_loop(n_epochs=n_epochs)
 
 
 class IL_Trainer_CARLA_SafeAC(IL_Trainer_CARLA):
@@ -337,7 +332,7 @@ class IL_Trainer_CARLA_SafeAC(IL_Trainer_CARLA):
 
     def initialize_replay_buffer(self, replay_buffer_maxsize):
         self.replay_buffer = data_util.EfficientReplayBufferPN(maxsize=replay_buffer_maxsize,
-                                                               lazy_init=not params['experimental'],
+                                                               lazy_init=True,
                                                                )
 
     def pretrain_critic(self):

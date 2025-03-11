@@ -6,8 +6,6 @@ from typing import Callable, List, TypeVar, Type, Dict
 import numpy as np
 import scipy
 
-# from FADS.density import KDE
-# from FADS.sampling import DS
 import FADS
 
 from mpclab_common.pytypes import VehicleState
@@ -16,7 +14,6 @@ from sklearn.neighbors import NearestNeighbors
 from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from tqdm import tqdm
 
-from carla_gym.controllers.barc_lmpc import LMPCWrapper
 from utils import pytorch_util as ptu
 import os
 from loguru import logger
@@ -156,8 +153,6 @@ class EfficientReplayBuffer(Dataset, ABC):
         idx: the external index. Must be in [0, size).
         Note: This implementation doesn't retain the original order!
         """
-        # if idx is None:
-        #     return self.popback(1)
         if isinstance(idx, int):
             idx = [idx]
         idx = list(set(idx))
@@ -216,8 +211,6 @@ class EfficientReplayBuffer(Dataset, ABC):
         path = path or Path(__file__).resolve().parent.parent / 'data'
         path = Path(path)
         name = f"{self.replay_buffer_name}{f'_{name}' if name else ''}"
-        # path = path or Path(os.path.expanduser('~/Documents/vision_racing_barc/data'))
-        # name = name or self.replay_buffer_name
         if not os.path.exists(path / f"{name}.npz"):
             logger.warning("Replay buffer save file not found!")
             return
@@ -278,21 +271,12 @@ class EfficientReplayBuffer(Dataset, ABC):
             # indices = np.random.choice(len(data), size=n_samples, replace=False)
             fads = FADS.FADS(data)
             indices = fads.DS(n_samples)
-            # data = data[indices]
+            data = data[indices]
         else:
-            data = data.copy()  # Ensure original data isn't modified
-
-        # Estimate density (kernel density estimation)
-
-        # probabilities = 1 / density_estimator.scores  # Inverse density weights
-
-        # Select 1,000 uniform subsamples
-        # ds_subsample = DS(data, n=8192, probabilities=probabilities).select()
+            data = data.copy()
 
         nbr.fit(data)
-        # Correctly retrieve up to k neighbors within threshold for each query
         dists, indices = nbr.radius_neighbors(query, radius=threshold, return_distance=True, sort_results=True)
-        # Truncate each query's neighbors to k closest
         # indices = [idx[:k] for idx in indices]
         ret = []
         for q, idx in tqdm(zip(query, indices), total=len(indices), desc='Self-labeling'):
@@ -413,116 +397,6 @@ class EfficientReplayBufferPN_nopreprocess(EfficientReplayBufferPN):
         return
 
 
-class LMPCPredictor(LMPCWrapper):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.lmpc_params = dict(
-            N=15,
-            n_ss_pts=96,
-            n_ss_its=8,
-        )
-
-
-class EfficientReplayBufferPN_LMPC(EfficientReplayBuffer):
-    def __init__(self, maxsize: int = 1_000_000, random_eviction: bool = True, expert=None):
-        self.D_pos = EfficientReplayBuffer(maxsize=maxsize, random_eviction=random_eviction,
-                                           constants={'safe': np.array([0.9], dtype=np.float32)})
-        self.D_neg = EfficientReplayBuffer(maxsize=maxsize, random_eviction=random_eviction,
-                                           constants={'safe': np.array([0.1], dtype=np.float32)})
-        self.buffer = EfficientReplayBuffer(maxsize=16384, random_eviction=random_eviction)
-        self.expert = expert
-
-        # self.lap_data = []
-        # self.last_lap_data = None
-
-    # def _process_lmpc_data(self, lap_no):
-    #     # try:
-    #     # q_data, u_data, lap_c2g = self.lmpc._process_lap_data(self.lap_data)
-    #     q_data, u_data = zip(*self.lap_data)
-    #     q_data = np.asarray(q_data)
-    #     u_data = np.asarray(u_data)
-    #     lap_c2g = np.zeros((q_data.shape[0],))
-    #     # except IndexError as e:
-    #     #     return
-    #     self.lmpc.lmpc_controller.add_iter_data(q_data, u_data)
-    #     self.lmpc.lmpc_controller.add_safe_set_data(q_data, u_data, lap_c2g)
-
-        # if self.last_lap_data is not None:
-            # If this is not the first lap, consider the current lap as the extension of the previous lap
-            # and append to the safe set as additional data.
-            # last_lap_end = self.last_lap_data[-1].t
-            # for ld in copy.deepcopy(self.lap_data):
-                # ld.p.s += self.lmpc.track_obj.track_length
-                # self.last_lap_data.append(ld)
-            # q_data, u_data, lap_c2g = self.lmpc._process_lap_data(self.last_lap_data, lap_end=last_lap_end)
-            # self.lmpc.lmpc_controller.add_safe_set_data(q_data, u_data, lap_c2g, iter_idx=lap_no - 1)
-        # self.last_lap_data = copy.deepcopy(self.lap_data)
-        # self.lap_data = []
-
-    def add_frame(self, obs, rews, terminated, truncated, info, **kwargs):
-        if terminated:
-            self.D_pos.absorb(self.buffer)
-            # self._process_lmpc_data(len(self.lap_data))
-        elif truncated:
-            self.D_neg.absorb(self.buffer)
-        self.buffer.append(batched=False,
-                           rewards=rews,
-                           **obs, **kwargs)
-        # self.lap_data.append((obs['state'], kwargs['closed_loop_action']))
-
-    def clear_buffer(self):
-        self.buffer.clear()
-        # self.lmpc.clear_lap_data()
-        # self.lap_data = []
-        # self.last_lap_data = None
-
-    def __len__(self):
-        return len(self.D_pos) + len(self.D_neg)
-
-    def __getitem__(self, idx):
-        if idx < len(self.D_pos):
-            return self.D_pos[idx]
-        return self.D_neg[idx - len(self.D_pos)]
-
-    def popback(self, n) -> None:
-        return self.buffer.popback(n)
-
-    def pop(self, idx=None) -> None:
-        raise NotImplementedError
-
-    def export(self, path=None, name=None):
-        self.D_pos.export(path=path, name=f"{name}_pos")
-        self.D_neg.export(path=path, name=f"{name}_neg")
-
-    def load(self, path=None, name=None):
-        self.D_pos.load(path=path, name=f"{name}_pos")
-        self.D_neg.load(path=path, name=f"{name}_neg")
-
-    def preprocess(self):
-        self.clear_buffer()
-        # self.buffer.clear()
-        if not self.D_neg.initialized:
-            return
-        neg_data = self.D_neg.consolidate()['state']
-        mask = []
-        status = defaultdict(lambda: 0)
-        for q in tqdm(neg_data, desc="Self-labeling"):
-            _state = VehicleState()
-            _state.v.v_long, _state.v.v_tran, _state.w.w_psi, _state.x.x, _state.x.y, _state.e.psi = q
-            self.expert.reset(options={'vehicle_state': _state})
-            info = self.expert.step(_state)
-            x_tran_pred = self.expert.controller.q_pred[:, 5]
-            # e_psi_pred = self.lmpc.lmpc_controller.q_pred[:, 3]
-            # status[info['status']] += 1
-            mask.append((np.abs(x_tran_pred) <= self.expert.track_obj.half_width).all())
-            # mask.append(info['success'])
-        # mask = self.D_pos.is_in_knn_convex_hull(self.D_neg.consolidate()['state'], ['state'], k=16)
-        projected_safe = self.D_neg.pop(np.where(mask)[0])
-        # self.D_pos.append(batched=True, size=np.sum(mask), **projected_safe)
-        logger.debug(f"Status in self-relabeling: {dict(status)}")
-        logger.debug(f"Ditched {np.sum(mask)} examples from D_neg. {len(self.D_neg)} left uncertain. {len(self.D_pos)} known safe.")
-
-
 class EfficientReplayBufferSA(EfficientReplayBuffer):
     def dataloader(self, batch_size: int = 64, shuffle: bool = True, num_workers: int = 0, manifest=None) -> DataLoader:
         return super().dataloader(batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
@@ -533,49 +407,3 @@ class EfficientReplayBufferSCA(EfficientReplayBuffer):
     def dataloader(self, batch_size: int = 64, shuffle: bool = True, num_workers: int = 0, manifest=None) -> DataLoader:
         return super().dataloader(batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
                                   manifest=[['states', 'conds'], ['actions']])
-
-# class EfficientReplayBufferSA(EfficientReplayBuffer):
-#     def _fetch(self, index):
-#         return self.fields['states'][index], self.fields['actions'][index]
-#
-#     def dataloader(self, batch_size: int, shuffle: bool, num_workers: int = 0) -> DataLoader:
-#         def collate_fn(data):
-#             states, actions = zip(*data)
-#             states = ptu.from_numpy(np.asarray(states)).float()
-#             actions = ptu.from_numpy(np.asarray(actions)).float()
-#             return states, actions
-#
-#         return DataLoader(self, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn, num_workers=num_workers)
-#
-#
-# class EfficientReplayBufferSCA(EfficientReplayBuffer):
-#     def add_frame(self, ob, ac, rew=None, done=None, info=None):
-#         state = ob['state']
-#         cond = np.array([info['avg_lap_speed']])
-#         self.append(batched=False,
-#                     states=state,
-#                     actions=ac,
-#                     conds=cond,
-#                     rews=rew,
-#                     dones=done,)
-#
-#     def _fetch(self, index):
-#         return self.fields['states'][index], self.fields['conds'][index], self.fields['actions'][index]
-#
-#     def dataloader(self, batch_size: int, shuffle: bool, num_workers: int = 0) -> DataLoader:
-#         def collate_fn(data):
-#             states, conds, actions = zip(*data)
-#             states = ptu.from_numpy(np.asarray(states)).float()
-#             conds = ptu.from_numpy(np.asarray(conds)).float()
-#             actions = ptu.from_numpy(np.asarray(actions)).float()
-#             return states, conds, actions
-#
-#         return DataLoader(self, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn, num_workers=num_workers)
-
-
-# Create a new Dataset class:
-# All information in batch-first numpy arrays from the same trajectory as elements in deques.
-# Data augmentations that affect labels (e.g. horizontal flipping) need to be done for the entire trajectory.
-# The __len__ method returns number of trajectories in the dataset.
-# Memory management is achieved by keeping track of number of examples in the dataset.
-#
