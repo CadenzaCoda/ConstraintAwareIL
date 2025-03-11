@@ -26,17 +26,20 @@ from utils import data_util
 from torch.utils.data import DataLoader
 import utils.pytorch_util as ptu
 from utils.logging.writer import MultiPurposeWriter
-# from util.expert_wrapper_carla import CARLA_PIDLaneFollowerWrapper
-# from utils.transformations import CustomTransformSet, RandomCutout, Grayscale, RandomBrightness, \
-#     RandomContrast
 
-# import multiprocessing as mp
 from loguru import logger
 from labml import experiment
 
 
+expert_mp = {
+    'pid': PIDWrapper,
+    'mpcc-conv': MPCCConvWrapper,
+}
+
+
 class IL_Trainer_CARLA(ABC):
     def __init__(self, carla_params,
+                 expert_cls,
                  initial_traj_len=1024,
                  eps_len=1024,
                  replay_buffer_maxsize=65536,
@@ -49,9 +52,9 @@ class IL_Trainer_CARLA(ABC):
                  batch_size: int = 1,
                  n_initial_training_epochs: int = 5,
                  beta: float = 0.25,
-                 use_labml_tracker: bool = True,
+                 # use_labml_tracker: bool = True,
                  pretrain_critic: bool = False,
-                 ntfy_freq: int = -1,
+                 # ntfy_freq: int = -1,
                  beta_decay_freq: int = 5,
                  **agent_params
                  ):
@@ -94,8 +97,7 @@ class IL_Trainer_CARLA(ABC):
         self.env = gym.make('barc-v0', **carla_params)
         self.eps_len = min(replay_buffer_maxsize, eps_len)
 
-        # self.expert = LMPCWrapper(dt=carla_params['dt'], t0=carla_params['t0'], track_obj=self.env.get_track())
-        self.expert = PIDWrapper(dt=carla_params['dt'], t0=carla_params['t0'], track_obj=self.env.get_track())
+        self.expert = expert_cls(dt=carla_params['dt'], t0=carla_params['t0'], track_obj=self.env.get_track())
         self.agent: 'BaseModel' = None
         self.initialize_agent(comment=comment, **agent_params)
 
@@ -106,8 +108,8 @@ class IL_Trainer_CARLA(ABC):
                                                                log_dir=f"logs/{self.agent.model_name}_{comment or ''}",
                                                                comment=comment or '',
                                                                print_method=logger.info,
-                                                               use_labml_tracker=use_labml_tracker,
-                                                               ntfy_freq=ntfy_freq,
+                                                               # use_labml_tracker=use_labml_tracker,
+                                                               # ntfy_freq=ntfy_freq,
                                                                )
 
         # Load previous model weights and replay buffer.
@@ -156,20 +158,14 @@ class IL_Trainer_CARLA(ABC):
 
         while not truncated:
             ac = self.agent.get_action(*self.agent.parse_carla_obs(ob, info))
-            # expert_ac, expert_info = self.expert.step(state=info['vehicle_state'],
-            #                                           terminated=terminated,
-            #                                           lap_no=info['lap_no'])
             expert_ac, expert_info = self.expert.step(**ob, **info)
             expert_ac = np.clip(expert_ac, self.env.action_space.low, self.env.action_space.high)
 
             # try:
             if expert_info['success']:
-                # action = expert_ac if np.random.rand() <= beta else ac
+                # action = expert_ac if np.random.rand() <= beta else ac  # Alternative: The SMILe variation
                 closed_loop_action = beta * expert_ac + (1 - beta) * ac
                 next_ob, rew, terminated, truncated, info = self.env.step(closed_loop_action)
-                # logger.debug(f"Action: {ac}, Expert action: {expert_ac}, v_long: {ob['state'][0]}")
-                # self.add_frame(ob=ob, ac_agent=ac, ac_expert=expert_ac, rew=rew, terminated=terminated,
-                #                truncated=truncated, info=info, next_ob=next_ob)
                 self.replay_buffer.add_frame(ob, rew, terminated, truncated, info,
                                              action=expert_ac.astype(np.float32),
                                              closed_loop_action=closed_loop_action.astype(np.float32),
@@ -181,9 +177,7 @@ class IL_Trainer_CARLA(ABC):
                 next_ob, rew, terminated, truncated, info = self.env.step(ac)
                 fail_counter += 1
                 if fail_counter >= PATIENCE:
-                    truncated = True  # NEW: Truncate the trajectory if expert fails for <PATIENCE> consecutive steps.
-                    # self.replay_buffer.popback(min(traj_len, TRUNCATE))
-
+                    truncated = True  # Truncate the trajectory if expert fails for <PATIENCE> consecutive steps.
             # except ValueError as e:  # Capture out-of-track errors from simulator step.
             #     logger.warning(e)
             #     truncated = True
@@ -210,21 +204,8 @@ class IL_Trainer_CARLA(ABC):
         self.writer.do_logging({f'failure_rate': (n_resets - 1) / total_length}, global_step=global_step, mode='train')
         return batch_traj_len
 
-    # def train_agent(self, global_step, val_loader: Optional[DataLoader] = None):
-    #     logger.info("Training agent...")
-    #     dataloader = self.replay_buffer.dataloader(shuffle=self.replay_buffer.random_eviction,
-    #                                                batch_size=self.batch_size)
-    #     info = self.agent.fit(train_loader=dataloader,
-    #                           val_loader=val_loader,
-    #                           n_epochs=self.n_training_per_epoch if global_step > 0 else self.n_initial_training_epochs,
-    #                           )
-    #     for mode, values in info.items():
-    #         self.writer.do_logging(values, global_step=global_step, mode=mode)
-
     def train_module(self, module, global_step):
         logger.info(f"Training {module.__class__.__name__}...")
-        # dataloader = self.replay_buffer.dataloader(shuffle=True, batch_size=self.batch_size,
-        #                                            manifest=[module.feature_fields, module.label_fields])
         info = module.fit(train_dataset=self.replay_buffer,
                           n_epochs=self.n_training_per_epoch if global_step > 0 else self.n_initial_training_epochs,
                           global_step=global_step)
@@ -326,7 +307,6 @@ class IL_Trainer_CARLA(ABC):
             for global_step in range(self.starting_step, n_epochs):
                 logger.info(f"Epoch {global_step} / {n_epochs}")
                 self.agent.step_schedule()
-                # self.sample_trajectories(beta=self.beta ** global_step)
                 self.sample_trajectory(beta=self.beta ** np.ceil(global_step / self.beta_decay_freq),
                                        max_traj_len=self.initial_traj_len if global_step == 0 else self.eps_len)
                 # self.sample_trajectories(beta=self.beta ** np.ceil(global_step / self.beta_decay_freq),
@@ -339,21 +319,8 @@ class IL_Trainer_CARLA(ABC):
                     self.evaluate_agent(global_step=global_step)
                 self.agent.export(path=os.path.join(Path(__file__).parent / 'model_data'), name=self.comment)
         finally:
-            hparam_dict = {
-                'initial_traj_len': self.initial_traj_len,
-                'beta': self.beta,
-                'eps_len': self.eps_len,
-                **self.agent_params
-            }
-            metric_dict = {
-                'success_rate': self.n_eval_success / self.n_eval_total if self.n_eval_total != 0 else None,
-                'mean_rew_last10': np.mean(np.asarray(self.eval_rewards_last10)) if len(
-                    self.eval_rewards_last10) else None,
-            }
-            # self.writer.add_hparams(hparam_dict, metric_dict)
             self.writer.flush()
-            self.writer.ntfy(message="Training program terminated.")
-            # self.replay_buffer.export()
+            # self.writer.ntfy(message="Training program terminated.")
 
     def main(self, n_epochs: int):
         if self.use_labml_tracker:
@@ -364,91 +331,6 @@ class IL_Trainer_CARLA(ABC):
             self.training_loop(n_epochs=n_epochs)
 
 
-class IL_Trainer_CARLA_StateFF(IL_Trainer_CARLA):
-    def update_carla_params(self, carla_params):
-        carla_params.update({
-            'enable_camera': False,
-        })
-
-    def initialize_agent(self, comment, **kwargs):
-        self.agent = models.feedforward.StateFF(ac_dim=2, st_dim=6, size=64, n_layers=3, lr=1e-3, weight_decay=1e-4,
-                                                feature_fields=['gps', 'velocity'], label_fields=['actions'])
-
-    def initialize_replay_buffer(self, replay_buffer_maxsize):
-        self.replay_buffer = data_util.EfficientReplayBuffer(replay_buffer_maxsize,
-                                                             lazy_init=not params['experimental'])
-
-
-class IL_Trainer_CARLA_ConditionedEncDec(IL_Trainer_CARLA):
-    def sample_trajectory(self, beta: float, pbar: Optional['tqdm'] = None,
-                          max_traj_len=np.inf,
-                          PATIENCE=2, TRUNCATE=5):
-        """
-        Note that we have to overwrite this function because the conditioning signal comes from a field in info.
-
-        @param beta:
-        @param pbar:
-        @param max_traj_len:
-        @param PATIENCE: Maximum allowed consecutive expert fails before truncating the trajectory.
-        @param TRUNCATE: Number of examples to remove from the replay buffer if the trajectory is truncated.
-        @return:
-        """
-        ob, info = self.env.reset(options={'controller': self.expert})
-        self.agent.reset()
-        self.agent.eval()
-        if self.do_relabel_with_expert:
-            self.expert.reset(options=info)
-        terminated, truncated = False, False
-        traj_len = 0
-        fail_counter = 0
-
-        while not truncated:
-            ac = self.agent.get_action(*self.agent.parse_carla_obs(ob))
-            # expert_ac, expert_info = self.expert.step(state=info['vehicle_state'],
-            #                                           terminated=terminated,
-            #                                           lap_no=info['lap_no'])
-            expert_ac, expert_info = self.expert.step(**ob, **info)
-            self.env.clip_action(expert_ac)
-
-            try:
-                if expert_info['success']:
-                    next_ob, rew, terminated, truncated, info = self.env.step(beta * expert_ac + (1 - beta) * ac)
-                    # logger.debug(f"Action: {ac}, Expert action: {expert_ac}, v_long: {ob['state'][0]}")
-                    self.add_frame(ob=ob, ac_agent=ac, ac_expert=expert_ac, rew=rew, terminated=terminated,
-                                   truncated=truncated, info=info, next_ob=next_ob)
-                    # self.replay_buffer.add_frame(ob, expert_ac.astype(np.float32), rew, truncated, info)  # The only line that's different
-                    fail_counter = 0
-
-                else:
-                    logger.warning(f"Expert solved inaccurate with code {expert_info.get('status', 'unknown')}.")
-                    next_ob, rew, terminated, truncated, info = self.env.step(ac)
-                    fail_counter += 1
-                    if fail_counter >= PATIENCE:
-                        truncated = True  # NEW: Truncate the trajectory if expert fails for <PATIENCE> consecutive steps.
-                        self.replay_buffer.popback(min(traj_len, TRUNCATE))
-
-            except ValueError as e:  # Capture out-of-track errors from simulator step.
-                logger.warning(e)
-                truncated = True
-                pass
-
-            ob = next_ob
-            traj_len += 1
-            if pbar is not None:
-                pbar.update(1)
-            if traj_len >= max_traj_len:
-                return traj_len
-        return traj_len
-
-    def initialize_agent(self, comment, **kwargs):
-        raise NotImplementedError
-        self.agent = ILAgent.ConditionedEncDec(ac_dim=2, st_dim=6, size=64, n_layers=3, lr=1e-3, weight_decay=1e-4,
-                                               cond_dim=1)
-
-    def initialize_replay_buffer(self, replay_buffer_maxsize):
-        self.replay_buffer = data_util.EfficientReplayBufferSCA(replay_buffer_maxsize)
-
-
 class IL_Trainer_CARLA_SafeAC(IL_Trainer_CARLA):
     def initialize_agent(self, comment, **kwargs):
         self.agent = safeAC.SafeAC(**kwargs)
@@ -456,9 +338,7 @@ class IL_Trainer_CARLA_SafeAC(IL_Trainer_CARLA):
     def initialize_replay_buffer(self, replay_buffer_maxsize):
         self.replay_buffer = data_util.EfficientReplayBufferPN(maxsize=replay_buffer_maxsize,
                                                                lazy_init=not params['experimental'],
-                                                               # lazy_init=not params['experimental'],
                                                                )
-        # self.replay_buffer = data_util.EfficientReplayBufferPN_LMPC(replay_buffer_maxsize, expert=self.expert)
 
     def pretrain_critic(self):
         pretraining_expert = LMPCWrapper(track_obj=self.env.get_track())
@@ -538,7 +418,6 @@ class IL_Trainer_CARLA_SafeAC(IL_Trainer_CARLA):
             for global_step in range(self.starting_step, n_epochs):
                 logger.info(f"Epoch {global_step} / {n_epochs}")
                 # self.agent.step_schedule()
-                # self.sample_trajectories(beta=self.beta ** global_step)
                 # self.sample_trajectory(beta=self.beta ** np.ceil(global_step / self.beta_decay_freq),
                 #                        max_traj_len=self.initial_traj_len if global_step == 0 else self.eps_len)
                 self.sample_trajectories(beta=self.beta ** np.ceil(global_step / self.beta_decay_freq),
@@ -554,9 +433,7 @@ class IL_Trainer_CARLA_SafeAC(IL_Trainer_CARLA):
                 self.agent.export(path=os.path.join(Path(__file__).parent / 'model_data'), name=self.comment)
         finally:
             self.writer.flush()
-            self.writer.ntfy(message="Training program terminated.")
-            # if not params['experimental']:
-                # self.replay_buffer.export(path=os.path.join(Path(__file__).parent / 'model_data'), name=self.comment)
+            # self.writer.ntfy(message="Training program terminated.")
 
 
 class IL_Trainer_CARLA_VisionSafeAC(IL_Trainer_CARLA_SafeAC):
@@ -589,6 +466,10 @@ if __name__ == '__main__':
     parser.add_argument('--n_training_per_epoch', type=int, default=1)
     parser.add_argument('--n_initial_training_epochs', type=int, default=5)
     parser.add_argument('--replay_buffer_maxsize', type=int, default=102_400)
+    parser.add_argument('--expert', '-c', type=str, default='mpcc-conv',
+                        choices=tuple(expert_mp.keys()))
+    parser.add_argument('--observe', '-o', type=str, default='camera',
+                        choices=('camera', 'state'))
     # parser.add_argument('--no_relabeling', action='store_true')
     parser.add_argument('--comment', '-m', type=str, default='')
     parser.add_argument('--eps_len', type=int, default=1024)
@@ -598,22 +479,19 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=2000)
     parser.add_argument('--dt', type=float, default=0.1)
     parser.add_argument('--no_saving', action='store_true')
-    # parser.add_argument('--continue', action='store_true')
     parser.add_argument('--eval_freq', type=int, default=1)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--beta', type=float, default=0.95)
     parser.add_argument('--beta_decay_freq', type=int, default=1)
 
-    # parser.add_argument('--evaluation', action='store_true')
-    parser.add_argument('--evaluation', type=str, default=None)
-    parser.add_argument('--validation', action='store_true')
+    parser.add_argument('--evaluation', action='store_true')
     parser.add_argument('--continue', type=int, default=0)
     parser.add_argument('--freeze_weather', action='store_true')
     parser.add_argument('--fix_spawning', action='store_true')
     parser.add_argument('--pretrain_critic', action='store_true')
 
     parser.add_argument('--experimental', action='store_true')
-    parser.add_argument('--ntfy_freq', type=int, default=100)
+    # parser.add_argument('--ntfy_freq', type=int, default=100)
 
     params = vars(parser.parse_args())
 
@@ -621,7 +499,7 @@ if __name__ == '__main__':
         params.update({
             # 'initial_traj_len': 128,
             'comment': '_'.join((params['comment'], 'experimental')),
-            'ntfy_freq': -1,
+            # 'ntfy_freq': -1,
         })
 
     print(params)
@@ -643,20 +521,17 @@ if __name__ == '__main__':
         enable_camera=True,
         host=params['host'],
         port=params['port'],
-    )  # Name kept as CARLA for backward compatibility.
+    )
 
-    # TODO: RESUME FROM HERE!!!!
-
-    with open("./config/visionSafeAC.yaml", 'r') as f:
+    with open(f"./config/{'visionSafeAC' if params['observe'] == 'camera' else 'safeAC'}.yaml", 'r') as f:
         config = yaml.safe_load(f)
 
     agent_params = config['model_hparams']
 
-    # trainer_cls = IL_Trainer_CARLA_StateFF
-    # trainer_cls = IL_Trainer_CARLA_ConditionedEncDec
-    trainer_cls = IL_Trainer_CARLA_VisionSafeAC
+    trainer_cls = IL_Trainer_CARLA_VisionSafeAC if params['observe'] == 'camera' else IL_Trainer_CARLA_SafeAC
 
     trainer = trainer_cls(carla_params,
+                          expert_cls=expert_mp[params['expert']],
                           replay_buffer_maxsize=params['replay_buffer_maxsize'],
                           eps_len=params['eps_len'],
                           initial_traj_len=params['initial_traj_len'],
@@ -669,8 +544,8 @@ if __name__ == '__main__':
                           batch_size=params['batch_size'],
                           n_initial_training_epochs=params['n_initial_training_epochs'],
                           beta=params['beta'],
-                          use_labml_tracker=not params['experimental'],
-                          ntfy_freq=params['ntfy_freq'],
+                          # use_labml_tracker=not params['experimental'],
+                          # ntfy_freq=params['ntfy_freq'],
                           beta_decay_freq=params['beta_decay_freq'],
                           pretrain_critic=params['pretrain_critic'],
                           **agent_params
@@ -679,15 +554,7 @@ if __name__ == '__main__':
     if params['evaluation']:
         trainer.agent.load(path=Path(__file__).resolve().parent / 'model_data' / 'significant_checkpoints',
                            name=comment)
-        # for epoch in range(1):
         trainer.evaluate_agent(global_step=0)
 
     else:
-        val_loader = None
-        if params['validation']:
-            raise NotImplementedError
-            val_dataset = copy.deepcopy(trainer.replay_buffer)
-            val_dataset.load()
-            val_loader = val_dataset.dataloader(batch_size=params['batch_size'], shuffle=False)
-
         trainer.main(n_epochs=params['n_epochs'])
