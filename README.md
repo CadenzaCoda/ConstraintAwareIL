@@ -37,7 +37,8 @@ Before running the experiments:
 - Set the model hyperparameters in `config/safeAC.yaml` (for full-state feedback experiments) or `config/visionSafeAC.yaml` (for image feedback experiments). See the example files for template.
 - Start the CARLA server if running image feedback experiments. For enhanced reliability, we recommend running with the following flags: `-RenderOffScreen -quality-level=Low`.
 
-For the experiments in the 
+For each experiment in the paper, run the following. 
+
 ## Experiment V-A: Image Feedback Autonomous Path Following
 ```shell
 python il_trainer.py -c pid -o img -m <comment_for_logs> --n_epochs 50 
