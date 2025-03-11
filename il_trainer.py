@@ -465,7 +465,7 @@ if __name__ == '__main__':
                         choices=tuple(expert_mp.keys()))
     parser.add_argument('--observe', '-o', type=str, default='camera',
                         choices=('camera', 'state'))
-    # parser.add_argument('--no_relabeling', action='store_true')
+    parser.add_argument('--render', action='store_true')
     parser.add_argument('--comment', '-m', type=str, default='')
     parser.add_argument('--eps_len', type=int, default=1024)
 
@@ -511,9 +511,9 @@ if __name__ == '__main__':
     carla_params = dict(
         track_name=params['town'],
         t0=t0, dt=dt, dt_sim=dt_sim,
-        do_render=False,
+        do_render=params['render'],
         max_n_laps=50,
-        enable_camera=True,
+        enable_camera=params['observe'] == 'camera',
         host=params['host'],
         port=params['port'],
     )
