@@ -1,6 +1,6 @@
 # Constraint-Aware Imitation Learning for Autonomous Racing
 
-This repository contains the implementation of experiments from *"A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing"* (IROS 2025).
+This repository contains the implementation of experiments from [*"A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing"*](https://arxiv.org/abs/2503.07737) (Submitted to IEEE IROS 2025).
 
 ---
 
