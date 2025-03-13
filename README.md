@@ -12,11 +12,11 @@ We recommend using **Python 3.8**, as this implementation has only been tested o
 ```sh
 conda create -n CAIL python=3.8
 conda activate CAIL
+pip install -r requirements.txt
 pip install -e src/carla_gym/gym-carla
 pip install -e src/mpclab_common
 pip install -e src/mpclab_controllers
 pip install -e src/mpclab_simulation
-pip install -r requirements.txt
 ```
 
 ### CARLA Installation
