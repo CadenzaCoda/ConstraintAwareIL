@@ -22,10 +22,8 @@ pip install -r requirements.txt
 ### CARLA Installation
 This implementation relies on **CARLA** for camera-based experiments.
 
-#### Steps to Install CARLA:
-1. Follow the [CARLA official installation guide](https://carla.readthedocs.io/en/latest/start_quickstart/) for your OS.
-2. The simplest way is to download and unzip the precompiled version.
-3. We used **CARLA 0.9.15** in our simulations. You can download it [here](https://github.com/carla-simulator/carla/releases/tag/0.9.15).
+- Follow the [CARLA official installation guide](https://carla.readthedocs.io/en/latest/start_quickstart/) for your OS. The simplest way is to download and unzip the precompiled version.
+- We used **CARLA 0.9.15** in our simulations. You can download it [here](https://github.com/carla-simulator/carla/releases/tag/0.9.15).
 
 #### Installing CARLA's Python API
 For proper simulation functionality, install CARLA's Python API based on your Python version:
