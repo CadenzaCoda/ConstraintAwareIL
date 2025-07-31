@@ -1,6 +1,6 @@
 # Constraint-Aware Imitation Learning for Autonomous Racing
 
-This repository contains the implementation of experiments from [*"A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing"*](https://arxiv.org/abs/2503.07737) (Submitted to IEEE IROS 2025).
+This repository contains the implementation of experiments from [*"A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing"*](https://arxiv.org/abs/2503.07737) (IROS 2025).
 
 ---
 
@@ -64,16 +64,19 @@ Each experiment corresponds to a section in the paper. Run the following command
 ```sh
 python il_trainer.py -c pid -o camera -m <comment_for_logs> --n_epochs 50
 ```
+- In our experiments, we used hyperparameters $\lambda = 1$ and $\rho = 1$. 
 
 #### **Experiment V-B: Full-State Feedback Autonomous Car Racing**
 ```sh
 python il_trainer.py -c mpcc-conv -o state -m <comment_for_logs> --n_epochs 500
 ```
+- In our experiments, we used hyperparameters $\lambda = 10$ and $\rho = 1$. 
 
 #### **Experiment V-C: Image Feedback Autonomous Car Racing**
 ```sh
 python il_trainer.py -c mpcc-conv -o camera -m <comment_for_logs> --n_epochs 200
 ```
+- In our experiments, we used hyperparameters $\lambda = 1$ and $\rho = 1$. 
 
 ### Additional Help
 For a full list of available command-line arguments, run:
