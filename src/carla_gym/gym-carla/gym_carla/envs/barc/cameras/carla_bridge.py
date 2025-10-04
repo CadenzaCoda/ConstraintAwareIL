@@ -17,7 +17,7 @@ import pygame
 import skimage
 
 
-DEBUG = True
+DEBUG = False
 
 
 def rgb_to_display_surface(rgb, display_size):
