@@ -17,7 +17,7 @@ from gym import spaces
 # from barc_gym.mpclab_simulation.mpclab_python_simulation.utils.renderer import LMPCVisualizer
 from mpclab_common.track import get_track
 from mpclab_common.models.dynamics_models import CasadiDynamicBicycle, CasadiDynamicCLBicycle, DynamicBicycleConfig
-
+from mpclab_common.models.model_types import KinematicBicycleConfig
 from loguru import logger
 
 from gym_carla.envs.utils.renderer import LMPCVisualizer
@@ -46,11 +46,12 @@ class BarcEnv(gym.Env):
         VL = 0.37
         VW = 0.195
         sim_dynamics_config = DynamicBicycleConfig(dt=dt_sim,
+        # sim_dynamics_config = KinematicBicycleConfig(dt=dt_sim,
                                                    model_name='dynamic_bicycle',
                                                    noise=False,
                                                    discretization_method='rk4',
-                                                   simple_slip=False,
-                                                   tire_model='pacejka',
+                                                   # simple_slip=False,
+                                                   # tire_model='pacejka',
                                                    # mass=2.91,
                                                    # gravity=9.81,
                                                    # yaw_inertia=0.03323,
@@ -61,16 +62,17 @@ class BarcEnv(gym.Env):
                                                    # bump_dist_front=0.15,
                                                    # bump_dist_rear=0.15,
                                                    # bump_dist_center=0.1,
-                                                   mass=2.2187,
-                                                   yaw_inertia=0.02723,
+                                                   mass=2.92,
+                                                   yaw_inertia=0.03323,
                                                    wheel_friction=0.9,
                                                    pacejka_b_front=5.0,
                                                    pacejka_b_rear=5.0,
                                                    pacejka_c_front=2.28,
-                                                   pacejka_c_rear=2.28)
+                                                   pacejka_c_rear=2.28
+                                                   )
         # dynamics_simulator = DynamicsSimulator(t, sim_dynamics_config, delay=[0.1, 0.1], track=track_obj)
         # self.dynamics_simulator = DynamicsSimulator(t0, sim_dynamics_config, delay=None, track=self.track_obj)
-        self.dynamics_simulator = DynamicsSimulator(t0, sim_dynamics_config, delay=[0.1, 0.1], track=self.track_obj)
+        self.dynamics_simulator = DynamicsSimulator(t0, sim_dynamics_config, delay=[0.2, 0.2], track=self.track_obj)
         if enable_camera:
             from gym_carla.envs.barc.cameras.carla_bridge import CarlaConnector
             self.camera_bridge = CarlaConnector(self.track_name, host=self.host, port=self.port)

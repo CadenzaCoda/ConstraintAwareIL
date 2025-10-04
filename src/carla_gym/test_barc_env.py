@@ -24,7 +24,7 @@ def main(controller: str, seed=0):
     t0 = 0
     env = gym.make('barc-v0', track_name='L_track_barc',
                    t0=t0, dt=dt, dt_sim=dt_sim,
-                   do_render=True,
+                   do_render=False,
                    max_n_laps=20,
                    enable_camera=False)
     # expert = LMPCWrapper(dt=dt, t0=t0,
@@ -43,7 +43,7 @@ def main(controller: str, seed=0):
         # ac, _ = expert.step(vehicle_state=info['vehicle_state'], terminated=terminated, lap_no=info['lap_no'])
         ac, _ = expert.step(**ob, **info)
         # ac = np.array([2.0, -0.01])
-        # ac += np.random.randn(*ac.shape) * np.array([2.0, 0.1]) * 0.2
+        ac += np.random.randn(*ac.shape) * np.array([1.0, 0.436]) * 0.1
         ob, rew, terminated, truncated, info = env.step(ac)
         if terminated:
             lap_time.append(info['lap_time'])

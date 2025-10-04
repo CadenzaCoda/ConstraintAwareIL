@@ -18,32 +18,40 @@ class MPCCConvWrapper:
         self.t0 = t0
         self.track_obj = track_obj
         self.dynamics_config = DynamicBicycleConfig(dt=dt,
+                                                    # model_name='kinematic_bicycle',
                                                     model_name='dynamic_bicycle',
                                                     noise=False,
                                                     discretization_method='rk4',
                                                     simple_slip=False,
                                                     tire_model='pacejka',
-                                                    mass=2.2187,
-                                                    yaw_inertia=0.02723,
+                                                    # drive_model='all',
+                                                    mass=2.92,
+                                                    gravity=9.81,
+                                                    yaw_inertia=0.03323,
                                                     # mass=2.91,
                                                     # yaw_inertia=0.03323,
                                                     wheel_friction=0.9,
                                                     pacejka_b_front=5.0,
                                                     pacejka_b_rear=5.0,
                                                     pacejka_c_front=2.28,
-                                                    pacejka_c_rear=2.28)
+                                                    pacejka_c_rear=2.28,
+                                                    M=10, 
+                                                    )
         self.dyn_model = CasadiDynamicBicycle(t0, self.dynamics_config, track=track_obj)
 
         self.state_input_ub = VehicleState(x=Position(x=1e9, y=1e9),
                                            e=OrientationEuler(psi=10),
-                                           v=BodyLinearVelocity(v_long=4.0, v_tran=2),
+                                           v=BodyLinearVelocity(v_long=3.0, v_tran=10),
                                            w=BodyAngularVelocity(w_psi=7),
-                                           u=VehicleActuation(u_a=2.0, u_steer=0.45))
+                                        #    u=VehicleActuation(u_a=2.0, u_steer=0.45)
+                                           u=VehicleActuation(u_a=1.0, u_steer=0.436)
+                                           )
         self.state_input_lb = VehicleState(x=Position(x=-1e9, y=-1e9),
                                            e=OrientationEuler(psi=-10),
                                            v=BodyLinearVelocity(v_long=-4, v_tran=-2),
                                            w=BodyAngularVelocity(w_psi=-7),
-                                           u=VehicleActuation(u_a=-2.0, u_steer=-0.45))
+                                        #    u=VehicleActuation(u_a=-2.0, u_steer=-0.45)
+                                           u=VehicleActuation(u_a=-1.0, u_steer=-0.436))
         self.input_rate_max = VehicleState(u=VehicleActuation(u_a=40.0, u_steer=4.5))
         self.input_rate_min = VehicleState(u=VehicleActuation(u_a=-40.0, u_steer=-4.5))
 
@@ -57,23 +65,23 @@ class MPCCConvWrapper:
                                        state_scaling=[4, 2, 7, 6, 6, 2 * np.pi],
                                        input_scaling=[2, 0.436],
                                        # delay=None,
-                                       delay=[1, 1],
+                                       delay=[2, 2],
                                        parametric_contouring_cost=False,
-                                       contouring_cost=0.1,
-                                       contouring_cost_N=0.1,
+                                       contouring_cost=0.2,
+                                       contouring_cost_N=0.2, 
                                        lag_cost=1000.0,
                                        lag_cost_N=1000.0,
-                                       performance_cost=0.025,  # 0.03,  # 0.03,
+                                       performance_cost=0.03,  # 0.03,  # 0.03,
                                        vs_cost=1e-4,
                                        vs_rate_cost=1e-3,
-                                       vs_max=3.0,  # 4.5,  # 5.0,
+                                       vs_max=5.0,  # 4.5,  # 5.0,
                                        vs_min=0.0,
                                        vs_rate_max=5.0,
                                        vs_rate_min=-5.0,
                                        soft_track=True,
-                                       track_slack_quad=10000,
+                                       track_slack_quad=50,
                                        track_slack_lin=0,
-                                       track_tightening=0.1,
+                                       track_tightening=0.25,
                                        code_gen=False,
                                        opt_flag='O3',
                                        solver_name='MPCC_conv',
