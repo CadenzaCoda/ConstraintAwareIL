@@ -2,6 +2,22 @@
 
 This repository contains the implementation of experiments from [*"A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing"*](https://arxiv.org/abs/2503.07737) (IROS 2025).
 
+If you find this repository useful, please cite it in your publications. 
+
+```bibtex
+@INPROCEEDINGS{cao2025cail,
+  author={Cao, Shengfan and Joa, Eunhyek and Borrelli, Francesco},
+  booktitle={2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  title={A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing}, 
+  year={2025},
+  volume={},
+  number={},
+  pages={9830-9837},
+  keywords={Imitation learning;Cloning;Safety;Intelligent robots},
+  doi={10.1109/IROS60139.2025.11247769}
+}
+```
+
 ---
 
 ## Prerequisites
