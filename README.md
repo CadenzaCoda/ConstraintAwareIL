@@ -1,101 +1,189 @@
-# Constraint-Aware Imitation Learning for Autonomous Racing
+# CAIL: Constraint-Aware Imitation Learning for Autonomous Racing
 
-This repository contains the implementation of experiments from [*"A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing"*](https://arxiv.org/abs/2503.07737) (IROS 2025).
+**Safety supervision during behavior cloning, without an additional safety filter at deployment.**
 
-If you find this repository useful, please cite it in your publications. 
+Implementation of the experiments in **[A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing](https://doi.org/10.1109/IROS60139.2025.11247769)**.
 
-```bibtex
-@INPROCEEDINGS{cao2025cail,
-  author={Cao, Shengfan and Joa, Eunhyek and Borrelli, Francesco},
-  booktitle={2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
-  title={A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing}, 
-  year={2025},
-  volume={},
-  number={},
-  pages={9830-9837},
-  keywords={Imitation learning;Cloning;Safety;Intelligent robots},
-  doi={10.1109/IROS60139.2025.11247769}
-}
-```
+**Shengfan Cao, Eunhyek Joa, Francesco Borrelli**  
+2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (**IROS 2025**)
 
----
+[Paper](https://arxiv.org/abs/2503.07737) · [Published version](https://doi.org/10.1109/IROS60139.2025.11247769) · [Project page](https://cadenzacoda.github.io/portfolio/publications/constraint-aware-imitation-learning/) · [Citation](#citation)
 
-## Prerequisites
+## Overview
 
-### Python Environment Setup
-We recommend using **Python 3.8**, as this implementation has only been tested on it.
+CAIL studies **safe imitation learning from imperfect demonstrations that may include unsafe behavior**. It augments behavior cloning with a learned safety penalty, so training accounts for constraint satisfaction alongside imitation accuracy.
+
+The approach is motivated by a differentiable approximation of a minimum-effort predictive safety filter. A learned dynamics model and a learned safe-set membership model provide **privileged safety supervision** using full-state information during training. At deployment, actions come from the learned policy without an additional safety filter.
+
+The paper evaluates autonomous path following and racing in simulation, with both full-state feedback and image-plus-velocity feedback. It reports improved constraint satisfaction and more consistent task performance compared with behavior cloning trained with dataset aggregation.
+
+## How it works
+
+1. **Collect rollouts and expert supervision.** The training loop gathers trajectories using a mixture of expert and learner actions. Demonstrations and rollouts need not all be successful.
+2. **Learn a safety critic.** Learn forward dynamics and an approximation of safe-set membership. Safety auto-labeling constructs surrogate labels from successful and failed trajectories, using local convex-hull comparisons to reduce false negative labels. A failed trajectory does not imply that every state along it is unsafe.
+3. **Train a constraint-aware policy.** Combine the mean-squared imitation loss with a weighted negative-log-likelihood safety penalty. The safety weight is controlled by `lam` in the model configuration.
+4. **Execute the policy.** The learned policy produces actions directly; the dynamics and safety models are used for training rather than online action correction.
+
+See **Section IV, Equation (14), Algorithm 1, and Figure 2** of the [paper](https://arxiv.org/html/2503.07737v2) for the objective and architecture.
+
+### Training and deployment
+
+| Component or information | Training | Policy execution |
+| --- | --- | --- |
+| Expert policy | Supplies imitation targets and participates in rollout collection | Not needed to produce the learned policy's actions |
+| Full-state information | Used for expert and safety supervision | Used by the full-state policy; not required as full state by the image-feedback policy |
+| Learned dynamics and safety models | Supply the safety penalty | No additional safety-filter computation |
+| Policy observations | Full state, or images plus velocity measurements | The same observation type used to train the policy |
+
+The evaluation harness can query the expert for comparison and logging; the action applied during learned-policy evaluation comes from the learned policy.
+
+### Scope
+
+- **Empirical safety improvements:** the learned policy is not certified to satisfy constraints.
+- **Simulation experiments:** physical deployment and sim-to-real transfer are not validated in this paper.
+- **Iterative learning:** training includes new rollouts and expert supervision, rather than only a fixed offline dataset.
+- **Image-plus-velocity feedback:** `-o camera` includes velocity measurements; it does not mean camera-only sensing.
+
+## Installation
+
+The original experiments were documented with **Python 3.8** and **CARLA 0.9.15**. The bundled Python 3.8 CARLA wheel targets **Linux x86-64**. Use a CARLA Python API build that matches your Python version and operating system if using a different environment.
+
+### 1. Clone the repository and create the environment
 
 ```sh
+git clone https://github.com/CadenzaCoda/ConstraintAwareIL.git
+cd ConstraintAwareIL
+
 conda create -n CAIL python=3.8
 conda activate CAIL
-pip install -r requirements.txt
-pip install -e src/carla_gym/gym-carla
-pip install -e src/mpclab_common
-pip install -e src/mpclab_controllers
-pip install -e src/mpclab_simulation
 ```
 
-### CARLA Installation
-This implementation relies on **CARLA** for camera-based experiments.
+Run the remaining repository commands from this directory.
 
-- Follow the [CARLA official installation guide](https://carla.readthedocs.io/en/latest/start_quickstart/) for your OS. The simplest way is to download and unzip the precompiled version.
-- We used **CARLA 0.9.15** in our simulations. You can download it [here](https://github.com/carla-simulator/carla/releases/tag/0.9.15).
+### 2. Install Python dependencies and local packages
 
-#### Installing CARLA's Python API
-For proper simulation functionality, install CARLA's Python API based on your Python version:
-
-- **Python 3.8 (Recommended)**: Use the provided `.whl` file.
-  ```sh
-  pip install dist/carla-0.9.15-cp38-cp38-linux_x86_64.whl
-  ```
-- **Python 3.7**: If using the precompiled version, run the following after unzipping:
-  ```sh
-  cd $CARLA_ROOT/PythonAPI/carla/dist
-  pip install carla-0.9.15-cp37-cp37m-manylinux_2_27_x86_64.whl
-  ```
-  Replace `$CARLA_ROOT` with the CARLA installation directory.
-- **Other Python Versions**: You must build CARLA from source and generate the Python API accordingly. Follow the [official build instructions](https://carla.readthedocs.io/en/latest/build_system/).
-
-### HPIPM Installation
-The expert policy in this repository uses **HPIPM** as the optimization solver.
-
-Follow the [HPIPM installation guide](https://github.com/giaf/hpipm) to set up the environment and install its Python API in your Python environment.
-
----
-
-## Running the Experiments
-Before running any experiment:
-- Configure the model hyperparameters in:
-  - `config/safeAC.yaml` (for **full-state feedback** experiments)
-  - `config/visionSafeAC.yaml` (for **image feedback** experiments)
-- If running **image feedback experiments**, start the CARLA server. For better reliability, run CARLA with the following flags:
-  ```sh
-  ./CarlaUE4.sh -RenderOffScreen -quality-level=Low
-  ```
-
-### Running Specific Experiments
-Each experiment corresponds to a section in the paper. Run the following commands:
-
-#### **Experiment V-A: Image Feedback Autonomous Path Following**
 ```sh
-python il_trainer.py -c pid -o camera -m <comment_for_logs> --n_epochs 50
+python -m pip install -r requirements.txt
+python -m pip install -e src/carla_gym/gym-carla
+python -m pip install -e src/mpclab_common
+python -m pip install -e src/mpclab_controllers
+python -m pip install -e src/mpclab_simulation
 ```
-- In our experiments, we used hyperparameters $\lambda = 1$ and $\rho = 1$. 
 
-#### **Experiment V-B: Full-State Feedback Autonomous Car Racing**
+### 3. Install CARLA and its Python API
+
+Download and extract [CARLA 0.9.15](https://github.com/carla-simulator/carla/releases/tag/0.9.15). See the [CARLA installation guide](https://carla.readthedocs.io/en/0.9.15/start_quickstart/) for platform requirements.
+
+For the Python 3.8 Linux x86-64 environment above, install the supplied wheel:
+
 ```sh
-python il_trainer.py -c mpcc-conv -o state -m <comment_for_logs> --n_epochs 500
+python -m pip install dist/carla-0.9.15-cp38-cp38-linux_x86_64.whl
 ```
-- In our experiments, we used hyperparameters $\lambda = 10$ and $\rho = 1$. 
 
-#### **Experiment V-C: Image Feedback Autonomous Car Racing**
+For Python 3.7, the CARLA 0.9.15 distribution provides a corresponding wheel under `PythonAPI/carla/dist`. For other environments, obtain a matching API package or follow the [CARLA build instructions](https://carla.readthedocs.io/en/0.9.15/build_system/). Compatibility with another API wheel alone does not establish compatibility with the repository's remaining dependencies.
+
+### 4. Install HPIPM
+
+The MPCC expert uses **HPIPM** as its quadratic-programming solver. Follow the [HPIPM installation instructions](https://github.com/giaf/hpipm) to build the solver and install its Python interface in the active environment. Follow the upstream instructions for its native dependencies and library paths as well.
+
+## Run the experiments
+
+### Configure the model
+
+The observation mode selects the configuration file automatically:
+
+| Observation option | Configuration | Policy input |
+| --- | --- | --- |
+| `-o state` | [`config/safeAC.yaml`](config/safeAC.yaml) | Full state |
+| `-o camera` | [`config/visionSafeAC.yaml`](config/visionSafeAC.yaml) | RGB image and velocity measurements |
+
+Set `model_hparams.lam` in the selected file before launching a run. Both checked-in configurations currently set `lam` to `1.0`; the full-state racing experiment below calls for `10.0`.
+
+The safety auto-labeling radius `rho` is a separate setting: it defaults to `1.0` in `EfficientReplayBufferPN.preprocess` in [`utils/data_util.py`](utils/data_util.py). It is not currently exposed through the YAML files or a command-line flag. To use a different value, pass it explicitly to the `self.replay_buffer.preprocess(...)` call in `IL_Trainer_CARLA_SafeAC.training_loop` in [`il_trainer.py`](il_trainer.py).
+
+### Start CARLA for image-feedback experiments
+
+In a separate terminal, run the following from the extracted CARLA directory:
+
 ```sh
-python il_trainer.py -c mpcc-conv -o camera -m <comment_for_logs> --n_epochs 200
+./CarlaUE4.sh -RenderOffScreen -quality-level=Low
 ```
-- In our experiments, we used hyperparameters $\lambda = 1$ and $\rho = 1$. 
 
-### Additional Help
-For a full list of available command-line arguments, run:
+The trainer connects to `localhost:2000` by default. Use `--host` and `--port` if the server is elsewhere. Full-state experiments disable the camera bridge and do not require a running CARLA server.
+
+### Experiment V-A: Image-feedback path following
+
+Uses a PID expert for conservative-speed path following. Set `lam: 1.0` in `config/visionSafeAC.yaml` and use `rho = 1.0`.
+
+```sh
+python il_trainer.py -c pid -o camera -m path_following --n_epochs 50
+```
+
+### Experiment V-B: Full-state racing
+
+Uses an MPCC expert for high-speed racing. Set `lam: 10.0` in `config/safeAC.yaml` and use `rho = 1.0`.
+
+```sh
+python il_trainer.py -c mpcc-conv -o state -m state_racing --n_epochs 500
+```
+
+### Experiment V-C: Image-feedback racing
+
+Uses the MPCC expert with an image-plus-velocity policy. Set `lam: 1.0` in `config/visionSafeAC.yaml`.
+
+**Radius setting:** Figure 7 of arXiv v2 reports `rho = 0.5` for this experiment, while the earlier README specifies `rho = 1.0` and the code defaults to `1.0`. Record which value you use when comparing results. To follow the figure's setting, make the preprocessing call described above `self.replay_buffer.preprocess(rho=0.5)`; restore `rho=1.0` for V-A and V-B.
+
+```sh
+python il_trainer.py -c mpcc-conv -o camera -m image_racing --n_epochs 200
+```
+
+These commands select the experiment and training budget. They do not automatically apply the paper's checkpoint-selection or early-stopping criterion. The paper evaluates consecutive completed laps, capped at 50, and uses early stopping when a policy completes 50 laps for the second time. Compare checkpoints using the stated evaluation protocol rather than assuming the final training epoch is the best policy.
+
+### Outputs and useful options
+
+The trainer writes logs under `logs/`, model weights under `model_data/`, and selected checkpoints under `model_data/significant_checkpoints/`. Evaluation records completed laps, rewards, lap-time statistics, and trajectory plots.
+
+Use descriptive run names with `-m` so outputs are easy to distinguish. For comparisons, record the repository commit, configuration, `rho`, random seed, and checkpoint-selection rule.
+
+| Option | Purpose |
+| --- | --- |
+| `-c pid` / `-c mpcc-conv` | Select the expert |
+| `-o state` / `-o camera` | Select policy observations |
+| `-m NAME` | Label a run and its output files |
+| `--n_epochs N` | Set the training budget |
+| `--seed N` | Set the NumPy and PyTorch seed; default `42` |
+| `--host HOST --port PORT` | Set the CARLA connection |
+
+For the complete command-line interface, run this after installing the dependencies:
+
 ```sh
 python il_trainer.py -h
+```
+
+## Repository guide
+
+| Path | Contents |
+| --- | --- |
+| [`il_trainer.py`](il_trainer.py) | Rollout collection, training, evaluation, and command-line entry point |
+| [`config/`](config/) | Full-state and image-feedback model configurations |
+| [`models/safeAC.py`](models/safeAC.py) | Full-state policy, safety critic, and dynamics integration |
+| [`models/visionSafeAC.py`](models/visionSafeAC.py) | Image-feedback policy and training losses |
+| [`utils/data_util.py`](utils/data_util.py) | Replay buffers and safety auto-labeling |
+| [`src/carla_gym/`](src/carla_gym/) | Environment integration and expert controller wrappers |
+| [`src/mpclab_common/`](src/mpclab_common/), [`src/mpclab_controllers/`](src/mpclab_controllers/), [`src/mpclab_simulation/`](src/mpclab_simulation/) | Vehicle models, controllers, track data, and simulation utilities |
+| [`dist/`](dist/) | Bundled CARLA Python API wheels |
+
+## Citation
+
+If you use this implementation or build on the method, please cite the IROS paper:
+
+```bibtex
+@inproceedings{cao2025cail,
+  author    = {Cao, Shengfan and Joa, Eunhyek and Borrelli, Francesco},
+  title     = {A Simple Approach to Constraint-Aware Imitation Learning with Application to Autonomous Racing},
+  booktitle = {2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
+  year      = {2025},
+  pages     = {9830--9837},
+  doi       = {10.1109/IROS60139.2025.11247769}
+}
 ```
